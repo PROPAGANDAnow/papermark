@@ -64,19 +64,11 @@ export async function handleRoute(req: NextApiRequest, res: NextApiResponse) {
       const isOldAccount = team.plan.includes("+old");
       const stripe = stripeInstance(isOldAccount);
 
-      // Fetch the subscription from Stripe to get the actual current_period_end
-      // This ensures we don't use stale data from the database
-      const subscription = await stripe.subscriptions.retrieve(
-        team.subscriptionId,
-      );
-
-      // Use the actual current_period_end from Stripe, ensuring pause starts at next billing cycle
-      // Never allow retroactive pausing - pauseStartsAt must be in the future
+      // Stripe's current SDK no longer exposes a subscription-level period end.
+      // Use the persisted renewal time and never schedule a retroactive pause.
       const now = new Date();
-      const stripePeriodEnd = new Date(
-        subscription.data.current_period_end * 1000,
-      );
-      const pauseStartsAt = stripePeriodEnd > now ? stripePeriodEnd : now;
+      const persistedPeriodEnd = team.endsAt ? new Date(team.endsAt) : now;
+      const pauseStartsAt = persistedPeriodEnd > now ? persistedPeriodEnd : now;
 
       const pauseEndsAt = new Date(pauseStartsAt);
       // Use 3 calendar months instead of 90 days to properly align with billing cycles
