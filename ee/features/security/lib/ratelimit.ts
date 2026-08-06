@@ -23,6 +23,15 @@ export const rateLimiters = {
     enableProtection: true,
     analytics: true,
   }),
+
+  // Bulk imports can create many shared links; scope the limit to the team.
+  bulkLinkImport: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(10, "20 m"),
+    prefix: "rl:bulk-link-import",
+    enableProtection: true,
+    analytics: true,
+  }),
 };
 
 /**
