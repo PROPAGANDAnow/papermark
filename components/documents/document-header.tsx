@@ -1,4 +1,3 @@
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
@@ -20,7 +19,6 @@ import {
   FolderIcon,
   FolderInputIcon,
   MoonIcon,
-  ScanEyeIcon,
   ServerIcon,
   SheetIcon,
   SunIcon,
@@ -31,7 +29,6 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { mutate } from "swr";
 
-import { useFeatureFlags } from "@/lib/hooks/use-feature-flags";
 import { useSelfMembership } from "@/lib/hooks/use-self-membership";
 import { usePlan } from "@/lib/swr/use-billing";
 import useDataroomsSimple from "@/lib/swr/use-datarooms-simple";
@@ -78,24 +75,6 @@ import AlertBanner from "./alert";
 import { ExportVisitsModal } from "./export-visits-modal";
 import { MoveToFolderModal } from "./move-folder-modal";
 
-// Redaction dialogs are only opened on demand from the 3-dot menu. Dynamic
-// imports keep their (lucide + radix + feature code) off the document-page
-// initial bundle.
-const RedactionJobsDialog = dynamic(
-  () =>
-    import("@/ee/features/redaction/components/redaction-jobs-dialog").then(
-      (mod) => ({ default: mod.RedactionJobsDialog }),
-    ),
-  { ssr: false },
-);
-const RedactionConfigDialog = dynamic(
-  () =>
-    import("@/ee/features/redaction/components/redaction-config-dialog").then(
-      (mod) => ({ default: mod.RedactionConfigDialog }),
-    ),
-  { ssr: false },
-);
-
 export default function DocumentHeader({
   prismaDocument,
   primaryVersion,
@@ -131,8 +110,6 @@ export default function DocumentHeader({
     theme === "light" || (theme === "system" && systemTheme === "light");
   const { isPro, isFree, isTrial, isBusiness, isDatarooms } = usePlan();
   const { canUseAI, isAIEnabled } = useTeamAI();
-  const { isFeatureEnabled } = useFeatureFlags();
-  const isRedactionEnabled = isFeatureEnabled("redaction");
   const [isEditingName, setIsEditingName] = useState<boolean>(false);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [isFirstClick, setIsFirstClick] = useState<boolean>(false);
@@ -141,9 +118,6 @@ export default function DocumentHeader({
   const [moveFolderOpen, setMoveFolderOpen] = useState<boolean>(false);
   const [addDocumentVersion, setAddDocumentVersion] = useState<boolean>(false);
   const [openAddDocModal, setOpenAddDocModal] = useState<boolean>(false);
-  const [redactionJobsOpen, setRedactionJobsOpen] = useState<boolean>(false);
-  const [redactionConfigOpen, setRedactionConfigOpen] =
-    useState<boolean>(false);
   const [planModalOpen, setPlanModalOpen] = useState<boolean>(false);
   const [planModalTrigger, setPlanModalTrigger] = useState<string>("");
   const [selectedPlan, setSelectedPlan] = useState<PlanEnum>(PlanEnum.Pro);
@@ -841,19 +815,6 @@ export default function DocumentHeader({
                 </DropdownMenuItem>
               )}
 
-              {/* Redaction jobs - beta, PDFs only */}
-              {isRedactionEnabled && primaryVersion.type === "pdf" ? (
-                <DropdownMenuItem
-                  onClick={() => {
-                    setRedactionJobsOpen(true);
-                    setMenuOpen(false);
-                  }}
-                >
-                  <ScanEyeIcon className="mr-2 h-4 w-4" />
-                  Redaction jobs
-                </DropdownMenuItem>
-              ) : null}
-
               {onBulkImportLinks && (
                 <DropdownMenuItem
                   onClick={() => {
@@ -1180,28 +1141,6 @@ export default function DocumentHeader({
         agentsEnabled={prismaDocument.agentsEnabled}
         vectorStoreFileId={primaryVersion.vectorStoreFileId}
       />
-
-      {isRedactionEnabled && primaryVersion.type === "pdf" ? (
-        <>
-          {redactionJobsOpen ? (
-            <RedactionJobsDialog
-              open={redactionJobsOpen}
-              onOpenChange={setRedactionJobsOpen}
-              documentId={prismaDocument.id}
-              documentName={prismaDocument.name}
-              onStartNew={() => setRedactionConfigOpen(true)}
-            />
-          ) : null}
-          {redactionConfigOpen ? (
-            <RedactionConfigDialog
-              open={redactionConfigOpen}
-              onOpenChange={setRedactionConfigOpen}
-              documentId={prismaDocument.id}
-              documentName={prismaDocument.name}
-            />
-          ) : null}
-        </>
-      ) : null}
     </header>
   );
 }
