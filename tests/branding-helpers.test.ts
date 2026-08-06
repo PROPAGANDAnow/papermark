@@ -14,6 +14,7 @@ import {
   asDataroomViewerHeaderStyle,
   inferDataroomViewerLayoutPreset,
 } from "../ee/features/branding/lib/dataroom-viewer-layout";
+import { parseBrandingPreviewParams } from "../ee/features/branding/lib/use-branding-preview-params";
 import { getLogoToneFromPixels } from "../ee/features/branding/lib/use-logo-tone";
 
 test("resolves hidden branding before custom or Papermark logo fallbacks", () => {
@@ -181,4 +182,45 @@ test("classifies logo tone from visible pixels while ignoring transparent canvas
     "dark",
   );
   assert.equal(getLogoToneFromPixels([]), "dark");
+});
+
+test("parses only safe, supported branding preview query values", () => {
+  assert.deepEqual(
+    parseBrandingPreviewParams({
+      brandColor: "#123456",
+      accentColor: "#abc",
+      accentButtonColor: "#abcdef",
+      brandLogo: "https://assets.example.com/logo.png",
+      hideLogo: "1",
+      ctaLabel: "Learn more",
+      ctaUrl: "https://example.com/learn-more",
+      welcomeMessage: "Welcome to the data room",
+    }),
+    {
+      brandColor: "#123456",
+      accentColor: "#abc",
+      accentButtonColor: "#abcdef",
+      brandLogo: "https://assets.example.com/logo.png",
+      hideLogo: "1",
+      ctaLabel: "Learn more",
+      ctaUrl: "https://example.com/learn-more",
+      welcomeMessage: "Welcome to the data room",
+    },
+  );
+});
+
+test("drops malformed, executable, and oversized branding preview query values", () => {
+  assert.deepEqual(
+    parseBrandingPreviewParams({
+      brandColor: "red; background: url(https://attacker.example)",
+      accentColor: "url(javascript:alert(1))",
+      accentButtonColor: ["#123456", "#abcdef"],
+      brandLogo: "data:text/html,<script>alert(1)</script>",
+      hideLogo: "true",
+      ctaLabel: "<img src=x onerror=alert(1)>",
+      ctaUrl: "javascript:alert(1)",
+      welcomeMessage: "x".repeat(501),
+    }),
+    {},
+  );
 });
