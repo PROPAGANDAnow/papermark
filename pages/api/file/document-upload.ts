@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { type HandleUploadBody, handleUpload } from "@vercel/blob/client";
 import { getServerSession } from "next-auth/next";
 
+import { PapermarkApiError, getApiErrorResponse } from "@/lib/api/errors";
 import { canAccessAdminRoute } from "@/lib/auth/admin-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { SUPPORTED_DOCUMENT_MIME_TYPES } from "@/lib/constants";
@@ -24,7 +25,7 @@ export default async function handler(
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const session = await getServerSession(req, res, authOptions);
         if (!canAccessAdminRoute(session?.user?.email ?? undefined)) {
-          throw new Error("Unauthorized");
+          throw new PapermarkApiError("unauthorized", "Unauthorized");
         }
 
         let payload: { teamId?: string; docId?: string };
@@ -34,7 +35,10 @@ export default async function handler(
             docId?: string;
           };
         } catch {
-          throw new Error("Invalid upload payload");
+          throw new PapermarkApiError(
+            "unprocessable_entity",
+            "Invalid document upload request.",
+          );
         }
 
         const expectedPrefix = `documents/${payload.teamId}/${payload.docId}/`;
@@ -44,7 +48,10 @@ export default async function handler(
           !pathname.startsWith(expectedPrefix) ||
           pathname.slice(expectedPrefix.length).includes("/")
         ) {
-          throw new Error("Invalid document upload path");
+          throw new PapermarkApiError(
+            "unprocessable_entity",
+            "Invalid document upload request.",
+          );
         }
 
         return {
@@ -58,8 +65,13 @@ export default async function handler(
 
     return res.status(200).json(response);
   } catch (error) {
-    return res
-      .status(400)
-      .json({ error: "Unable to authorize document upload" });
+    const response = getApiErrorResponse(error, {
+      status: 400,
+      body: {
+        error: "Unable to authorize document upload",
+        code: "bad_request",
+      },
+    });
+    return res.status(response.status).json(response.body);
   }
 }
