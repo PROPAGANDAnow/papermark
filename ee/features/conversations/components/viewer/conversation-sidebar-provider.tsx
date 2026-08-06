@@ -20,7 +20,11 @@ export function ConversationSidebarProvider({
  * Returns null while the conversation sidebar is unavailable. Callers must
  * treat the missing context as disabled and must not render any data.
  */
-export function useConversationSidebarSafe() {
+export type ConversationSidebarState = {
+  isOpen: boolean;
+};
+
+export function useConversationSidebarSafe(): ConversationSidebarState | null {
   return null;
 }
 

@@ -697,7 +697,6 @@ export default function DataroomNav({
       {conversationsEnabled ? (
         <ConversationSidebar
           dataroomId={dataroomId}
-          dataroomName={dataroom?.name}
           viewId={viewId || ""}
           viewerId={viewerId}
           linkId={linkId!}

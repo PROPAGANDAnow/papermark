@@ -449,7 +449,6 @@ export function UpgradePlanModal({
 
                 const planFeatures = getPlanFeatures(effectivePlan, {
                   period,
-                  currency,
                   highlightFeatures: highlightForSelector,
                 });
 
@@ -574,11 +573,6 @@ export function UpgradePlanModal({
                           period
                         ].amount ?? 0
                       }
-                      amountUsd={
-                        PLANS.find((p) => p.name === displayPlanName)?.price[
-                          period
-                        ].amountUsd
-                      }
                       period={period}
                       currency={currency}
                     />
@@ -652,24 +646,12 @@ export function UpgradePlanModal({
                           // flow; otherwise keep it off every plan card.
                           if (
                             feature.id === "assign" &&
-                            !(
-                              highlightItem?.includes("assign") ||
-                              feature.aliasIds?.some((alias) =>
-                                highlightItem?.includes(alias),
-                              )
-                            )
+                            !highlightItem?.includes("assign")
                           ) {
                             return false;
                           }
                           if (!hideItems?.length) return true;
                           if (hideItems.includes(feature.id)) return false;
-                          if (
-                            feature.aliasIds?.some((alias) =>
-                              hideItems.includes(alias),
-                            )
-                          ) {
-                            return false;
-                          }
                           return true;
                         })
                         .map((feature, i) => {
@@ -684,10 +666,7 @@ export function UpgradePlanModal({
                                   ...feature,
                                   isHighlighted:
                                     feature.isHighlighted ||
-                                    highlightItem?.includes(feature.id) ||
-                                    feature.aliasIds?.some((alias) =>
-                                      highlightItem?.includes(alias),
-                                    ),
+                                    highlightItem?.includes(feature.id),
                                 }}
                                 onUnlimitedClick={
                                   feature.isUsers && isDataRoomPlan
