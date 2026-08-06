@@ -71,3 +71,21 @@ test("social preview accepts only safe raster and brand asset sources", () => {
     assert.equal(getSafeSocialPreviewAsset(value), null);
   }
 });
+
+test("visitor language card uses the supported locale allowlist and preserves the free English option", () => {
+  const componentPath = path.join(
+    componentsDirectory,
+    "visitor-language-card.tsx",
+  );
+  assert.equal(existsSync(componentPath), true);
+
+  const component = readFileSync(componentPath, "utf8");
+  assert.match(component, /SUPPORTED_LOCALES/);
+  assert.match(component, /asSupportedLocale/);
+  assert.match(component, /DEFAULT_LOCALE/);
+  assert.match(component, /defaultLanguage: SupportedLocaleCode/);
+  assert.match(component, /onDefaultLanguageChange/);
+  assert.match(component, /hasAccess/);
+  assert.match(component, /value=\{locale\.code\}/);
+  assert.match(component, /locale !== DEFAULT_LOCALE/);
+});
