@@ -6,6 +6,15 @@ import {
   resolveBrandLogo,
 } from "../ee/features/branding/lib/brand-logo";
 import { classifyDataroomBanner } from "../ee/features/branding/lib/dataroom-banner";
+import {
+  DataroomCardLayoutSchema,
+  DataroomViewerHeaderStyleSchema,
+  DataroomViewerLayoutPresetSchema,
+  asDataroomCardLayout,
+  asDataroomViewerHeaderStyle,
+  inferDataroomViewerLayoutPreset,
+} from "../ee/features/branding/lib/dataroom-viewer-layout";
+import { getLogoToneFromPixels } from "../ee/features/branding/lib/use-logo-tone";
 
 test("resolves hidden branding before custom or Papermark logo fallbacks", () => {
   assert.deepEqual(
@@ -94,4 +103,82 @@ test("classifies only safe banner media and canonical YouTube embeds", () => {
     classifyDataroomBanner("https://cdn.example.com/banner.MP4?version=1"),
     { kind: "video", src: "https://cdn.example.com/banner.MP4?version=1" },
   );
+});
+
+test("accepts only supported persisted dataroom layout values and falls back safely", () => {
+  assert.equal(DataroomCardLayoutSchema.parse("LIST"), "LIST");
+  assert.equal(DataroomCardLayoutSchema.parse("GRID"), "GRID");
+  assert.equal(DataroomCardLayoutSchema.parse("COMPACT"), "COMPACT");
+  assert.equal(DataroomViewerHeaderStyleSchema.parse("DEFAULT"), "DEFAULT");
+  assert.equal(DataroomViewerHeaderStyleSchema.parse("SPLIT"), "SPLIT");
+  assert.equal(DataroomViewerHeaderStyleSchema.parse("NOTION"), "NOTION");
+  assert.equal(DataroomViewerLayoutPresetSchema.parse("CUSTOM"), "CUSTOM");
+
+  for (const invalidValue of [undefined, null, "grid", "SCRIPT", 1]) {
+    assert.equal(asDataroomCardLayout(invalidValue), "LIST");
+    assert.equal(asDataroomViewerHeaderStyle(invalidValue), "DEFAULT");
+  }
+  assert.equal(DataroomCardLayoutSchema.safeParse("SCRIPT").success, false);
+  assert.equal(
+    DataroomViewerHeaderStyleSchema.safeParse("SCRIPT").success,
+    false,
+  );
+});
+
+test("infers named layout presets only for their exact supported combinations", () => {
+  assert.equal(
+    inferDataroomViewerLayoutPreset({
+      cardLayout: "LIST",
+      showFolderTree: true,
+      hideFolderIconsInMain: false,
+      viewerHeaderStyle: "DEFAULT",
+    }),
+    "STANDARD",
+  );
+  assert.equal(
+    inferDataroomViewerLayoutPreset({
+      cardLayout: "COMPACT",
+      showFolderTree: false,
+      hideFolderIconsInMain: true,
+      viewerHeaderStyle: "SPLIT",
+    }),
+    "MODERN",
+  );
+  assert.equal(
+    inferDataroomViewerLayoutPreset({
+      cardLayout: "GRID",
+      showFolderTree: false,
+      hideFolderIconsInMain: false,
+      viewerHeaderStyle: "NOTION",
+    }),
+    "NOTION",
+  );
+  assert.equal(
+    inferDataroomViewerLayoutPreset({
+      cardLayout: "GRID",
+      showFolderTree: true,
+      hideFolderIconsInMain: false,
+      viewerHeaderStyle: "NOTION",
+    }),
+    "CUSTOM",
+  );
+});
+
+test("classifies logo tone from visible pixels while ignoring transparent canvas pixels", () => {
+  assert.equal(getLogoToneFromPixels([255, 255, 255, 255]), "light");
+  assert.equal(getLogoToneFromPixels([0, 0, 0, 255]), "dark");
+  assert.equal(
+    getLogoToneFromPixels([
+      255,
+      255,
+      255,
+      0, // transparent canvas padding
+      0,
+      0,
+      0,
+      255, // visible black logo
+    ]),
+    "dark",
+  );
+  assert.equal(getLogoToneFromPixels([]), "dark");
 });
