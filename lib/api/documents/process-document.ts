@@ -1,7 +1,3 @@
-import type {
-  convertFilesToPdfTask,
-  convertKeynoteToPdfTask,
-} from "@/ee/features/conversions/lib/trigger/convert-files";
 import { tasks } from "@trigger.dev/sdk";
 
 import { validateExternalDocumentUrl } from "@/lib/api/documents/validate-external-url";
@@ -148,7 +144,7 @@ export const processDocument = async ({
     (contentType === "application/vnd.apple.keynote" ||
       contentType === "application/x-iwork-keynote-sffkey")
   ) {
-    await tasks.trigger<typeof convertKeynoteToPdfTask>(
+    await tasks.trigger(
       "convert-keynote-to-pdf",
       {
         documentId: document.id,
@@ -171,7 +167,7 @@ export const processDocument = async ({
     !isDownloadOnlyByExtension &&
     !isMarkdown
   ) {
-    await tasks.trigger<typeof convertFilesToPdfTask>(
+    await tasks.trigger(
       "convert-files-to-pdf",
       {
         documentId: document.id,
