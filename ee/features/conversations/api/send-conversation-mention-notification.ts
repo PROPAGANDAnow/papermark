@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 
-import prisma from "@/lib/prisma";
 import { z } from "zod";
+
+import prisma from "@/lib/prisma";
 
 const requestSchema = z
   .object({
@@ -71,7 +72,9 @@ export default async function handle(
       }),
     ]);
 
-    const memberIds = new Set(memberships.map((membership) => membership.userId));
+    const memberIds = new Set(
+      memberships.map((membership) => membership.userId),
+    );
     if (
       !conversation ||
       !memberIds.has(senderUserId) ||
@@ -84,7 +87,10 @@ export default async function handle(
       message: "Conversation mention notifications are not available",
     });
   } catch (error) {
-    console.error("Failed to validate conversation mention notification:", error);
+    console.error(
+      "Failed to validate conversation mention notification:",
+      error,
+    );
     return res.status(500).json({ message: "Internal server error" });
   }
 }

@@ -1,11 +1,12 @@
 import { NextApiRequest, NextApiResponse } from "next";
 
+import { getServerSession } from "next-auth/next";
+import { z } from "zod";
+
 import { authOptions } from "@/lib/auth/auth-options";
 import prisma from "@/lib/prisma";
 import { CustomUser } from "@/lib/types";
 import { validateContent } from "@/lib/utils/sanitize-html";
-import { getServerSession } from "next-auth/next";
-import { z } from "zod";
 
 const paramsSchema = z.object({
   teamId: z.string().min(1),
@@ -77,7 +78,13 @@ export async function handleRoute(req: NextApiRequest, res: NextApiResponse) {
           createdAt: true,
           updatedAt: true,
           assignments: {
-            select: { id: true, linkId: true, groupId: true, viewerId: true, email: true },
+            select: {
+              id: true,
+              linkId: true,
+              groupId: true,
+              viewerId: true,
+              email: true,
+            },
           },
         },
         orderBy: [{ orderIndex: "asc" }, { createdAt: "desc" }],
@@ -97,7 +104,9 @@ export async function handleRoute(req: NextApiRequest, res: NextApiResponse) {
         select: { id: true },
       });
       if (!document) {
-        return res.status(400).json({ error: "Invalid document for this dataroom" });
+        return res
+          .status(400)
+          .json({ error: "Invalid document for this dataroom" });
       }
     }
 

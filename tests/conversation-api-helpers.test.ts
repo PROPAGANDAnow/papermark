@@ -27,7 +27,10 @@ test("team questions helper authenticates and scopes queries to an active team m
   );
 
   assert.match(source, /getServerSession\(req, res, authOptions\)/);
-  assert.match(source, /users:\s*\{\s*some:\s*\{\s*userId[\s\S]*blockedAt:\s*null/);
+  assert.match(
+    source,
+    /users:\s*\{\s*some:\s*\{\s*userId[\s\S]*blockedAt:\s*null/,
+  );
   assert.match(source, /teamId/);
   assert.match(source, /dataroomId/);
 });
