@@ -11,6 +11,7 @@ import { VisitorLanguageCard } from "@/ee/features/branding/components/visitor-l
 import {
   AUTO_FILL_NOT_FOUND_MESSAGE,
   autoFillHasBrandAssets,
+  sanitizeAutoFillResult,
 } from "@/ee/features/branding/lib/auto-fill-result";
 import { mergeBrandLogoFields } from "@/ee/features/branding/lib/brand-logo";
 import {
@@ -288,24 +289,27 @@ export default function DataroomBrandPage() {
         toast.error(data.error || "Could not load brand");
         return;
       }
-      if (!autoFillHasBrandAssets(data, { allowBanner: true })) {
+      const autoFillResult = sanitizeAutoFillResult(data);
+      if (!autoFillHasBrandAssets(autoFillResult, { allowBanner: true })) {
         toast.error(AUTO_FILL_NOT_FOUND_MESSAGE);
         return;
       }
-      if (data.logo) {
-        setLogo(data.logo);
+      if (autoFillResult.logo) {
+        setLogo(autoFillResult.logo);
         setBlobUrl(null);
       }
-      if (data.banner) {
-        setBanner(data.banner);
-        setOriginalBanner(data.banner);
+      if (autoFillResult.banner) {
+        setBanner(autoFillResult.banner);
+        setOriginalBanner(autoFillResult.banner);
         setBannerBlobUrl(null);
       }
-      if (data.brandColor) setBrandColor(data.brandColor);
-      if (data.accentColor) setAccentColor(data.accentColor);
-      if (data.accentButtonColor) setAccentButtonColor(data.accentButtonColor);
+      if (autoFillResult.brandColor) setBrandColor(autoFillResult.brandColor);
+      if (autoFillResult.accentColor)
+        setAccentColor(autoFillResult.accentColor);
+      if (autoFillResult.accentButtonColor)
+        setAccentButtonColor(autoFillResult.accentButtonColor);
       toast.success(
-        `Loaded ${data.name ?? data.domain}. Review and click Save changes.`,
+        `Loaded ${autoFillResult.name ?? autoFillResult.domain ?? "brand"}. Review and click Save changes.`,
       );
     } catch (err) {
       toast.error("Lookup failed");

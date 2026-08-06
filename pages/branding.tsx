@@ -11,6 +11,7 @@ import { DataroomLayoutPresetCards } from "@/ee/features/branding/components/dat
 import {
   AUTO_FILL_NOT_FOUND_MESSAGE,
   autoFillHasBrandAssets,
+  sanitizeAutoFillResult,
 } from "@/ee/features/branding/lib/auto-fill-result";
 import {
   CARD_LAYOUT_OPTIONS,
@@ -237,24 +238,31 @@ export default function Branding() {
         toast.error(data.error || "Could not load brand");
         return;
       }
-      if (!autoFillHasBrandAssets(data, { allowBanner: hasDataroomAccess })) {
+      const autoFillResult = sanitizeAutoFillResult(data);
+      if (
+        !autoFillHasBrandAssets(autoFillResult, {
+          allowBanner: hasDataroomAccess,
+        })
+      ) {
         toast.error(AUTO_FILL_NOT_FOUND_MESSAGE);
         return;
       }
-      if (data.logo) {
-        setLogo(data.logo);
+      if (autoFillResult.logo) {
+        setLogo(autoFillResult.logo);
         setHideLogo(false);
         setBlobUrl(null);
       }
-      if (hasDataroomAccess && data.banner) {
-        setBanner(data.banner);
+      if (hasDataroomAccess && autoFillResult.banner) {
+        setBanner(autoFillResult.banner);
         setBannerBlobUrl(null);
       }
-      if (data.brandColor) setBrandColor(data.brandColor);
-      if (data.accentColor) setAccentColor(data.accentColor);
-      if (data.accentButtonColor) setAccentButtonColor(data.accentButtonColor);
+      if (autoFillResult.brandColor) setBrandColor(autoFillResult.brandColor);
+      if (autoFillResult.accentColor)
+        setAccentColor(autoFillResult.accentColor);
+      if (autoFillResult.accentButtonColor)
+        setAccentButtonColor(autoFillResult.accentButtonColor);
       toast.success(
-        `Loaded ${data.name ?? data.domain}. Review and click Save changes.`,
+        `Loaded ${autoFillResult.name ?? autoFillResult.domain ?? "brand"}. Review and click Save changes.`,
       );
     } catch (err) {
       toast.error("Lookup failed");
