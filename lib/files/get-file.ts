@@ -1,6 +1,7 @@
 import { DocumentStorageType } from "@prisma/client";
-import { getDownloadUrl } from "@vercel/blob";
 import { match } from "ts-pattern";
+
+import { createPrivateBlobProxyUrl } from "./private-blob-access";
 
 export type GetFileOptions = {
   type: DocumentStorageType;
@@ -24,13 +25,12 @@ export const getFile = async ({
   responseContentDisposition,
 }: GetFileOptions): Promise<string> => {
   const url = await match(type)
-    .with(DocumentStorageType.VERCEL_BLOB, () => {
-      if (isDownload) {
-        return getDownloadUrl(data);
-      } else {
-        return data;
-      }
-    })
+    .with(DocumentStorageType.VERCEL_BLOB, () =>
+      // Private Blob URLs require an Authorization header. Return a short-lived
+      // capability for our protected server-side proxy rather than leaking the
+      // raw Blob URL to a browser.
+      createPrivateBlobProxyUrl(data, process.env.NEXTAUTH_SECRET, isDownload),
+    )
     .with(DocumentStorageType.S3_PATH, async () =>
       getFileFromS3(data, expiresIn, responseContentDisposition),
     )

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getToken } from "next-auth/jwt";
 
+import { canAccessAdminRoute } from "@/lib/auth/admin-auth";
+
 const LOGIN_PATH = "/login";
 const DEFAULT_AUTH_REDIRECT_PATH = "/dashboard";
 
@@ -9,7 +11,10 @@ function isProtocolRelativePath(path: string) {
   return path[1] === "/" || path[1] === "\\";
 }
 
-function normalizeNextPath(nextPath: string | null, requestUrl: string): string {
+function normalizeNextPath(
+  nextPath: string | null,
+  requestUrl: string,
+): string {
   if (!nextPath) {
     return DEFAULT_AUTH_REDIRECT_PATH;
   }
@@ -61,8 +66,11 @@ export default async function AppMiddleware(req: NextRequest) {
     };
   };
 
-  // UNAUTHENTICATED if there's no token and the path isn't /login, redirect to /login
-  if (!token?.email && path !== LOGIN_PATH) {
+  // Dashboard routes are administrator-only. Viewer/share routes never enter
+  // this middleware (see root middleware), so their document gates remain
+  // independent from administrator authentication.
+  const isAdmin = canAccessAdminRoute(token?.email);
+  if (!isAdmin && path !== LOGIN_PATH) {
     const loginUrl = new URL(LOGIN_PATH, req.url);
     // Append "next" parameter only if not navigating to the root
     if (path !== "/") {
@@ -80,7 +88,7 @@ export default async function AppMiddleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (!token?.email && path === LOGIN_PATH) {
+  if (!isAdmin && path === LOGIN_PATH) {
     const rawNextPath = url.searchParams.get("next");
 
     if (rawNextPath) {
@@ -103,7 +111,7 @@ export default async function AppMiddleware(req: NextRequest) {
 
   // AUTHENTICATED if the user was created in the last 10 seconds, redirect to "/welcome"
   if (
-    token?.email &&
+    isAdmin &&
     token?.user?.createdAt &&
     new Date(token?.user?.createdAt).getTime() > Date.now() - 10000 &&
     path !== "/welcome" &&
@@ -113,7 +121,7 @@ export default async function AppMiddleware(req: NextRequest) {
   }
 
   // AUTHENTICATED if the path is /login, redirect to the next path
-  if (token?.email && path === LOGIN_PATH) {
+  if (isAdmin && path === LOGIN_PATH) {
     const nextPath = normalizeNextPath(url.searchParams.get("next"), req.url);
     return NextResponse.redirect(new URL(nextPath, req.url));
   }

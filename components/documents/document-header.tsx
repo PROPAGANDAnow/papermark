@@ -31,7 +31,6 @@ import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { mutate } from "swr";
 
-import { getFile } from "@/lib/files/get-file";
 import { useFeatureFlags } from "@/lib/hooks/use-feature-flags";
 import { useSelfMembership } from "@/lib/hooks/use-self-membership";
 import { usePlan } from "@/lib/swr/use-billing";
@@ -69,6 +68,15 @@ import {
 
 import PlanBadge from "../billing/plan-badge";
 import { UpgradePlanModal } from "../billing/upgrade-plan-modal";
+import AdvancedSheet from "../shared/icons/advanced-sheet";
+import PortraitLandscape from "../shared/icons/portrait-landscape";
+import LoadingSpinner from "../ui/loading-spinner";
+import { ButtonTooltip } from "../ui/tooltip";
+import { AddDocumentModal } from "./add-document-modal";
+import { AddToDataroomModal } from "./add-document-to-dataroom-modal";
+import AlertBanner from "./alert";
+import { ExportVisitsModal } from "./export-visits-modal";
+import { MoveToFolderModal } from "./move-folder-modal";
 
 // Redaction dialogs are only opened on demand from the 3-dot menu. Dynamic
 // imports keep their (lucide + radix + feature code) off the document-page
@@ -87,15 +95,6 @@ const RedactionConfigDialog = dynamic(
     ),
   { ssr: false },
 );
-import AdvancedSheet from "../shared/icons/advanced-sheet";
-import PortraitLandscape from "../shared/icons/portrait-landscape";
-import LoadingSpinner from "../ui/loading-spinner";
-import { ButtonTooltip } from "../ui/tooltip";
-import { AddDocumentModal } from "./add-document-modal";
-import { AddToDataroomModal } from "./add-document-to-dataroom-modal";
-import AlertBanner from "./alert";
-import { ExportVisitsModal } from "./export-visits-modal";
-import { MoveToFolderModal } from "./move-folder-modal";
 
 export default function DocumentHeader({
   prismaDocument,
@@ -143,7 +142,8 @@ export default function DocumentHeader({
   const [addDocumentVersion, setAddDocumentVersion] = useState<boolean>(false);
   const [openAddDocModal, setOpenAddDocModal] = useState<boolean>(false);
   const [redactionJobsOpen, setRedactionJobsOpen] = useState<boolean>(false);
-  const [redactionConfigOpen, setRedactionConfigOpen] = useState<boolean>(false);
+  const [redactionConfigOpen, setRedactionConfigOpen] =
+    useState<boolean>(false);
   const [planModalOpen, setPlanModalOpen] = useState<boolean>(false);
   const [planModalTrigger, setPlanModalTrigger] = useState<string>("");
   const [selectedPlan, setSelectedPlan] = useState<PlanEnum>(PlanEnum.Pro);
@@ -580,13 +580,18 @@ export default function DocumentHeader({
     }
     toast.promise(
       (async () => {
-        const downloadUrl = await getFile({
-          type: documentVersion.storageType,
-          data: documentVersion.originalFile ?? documentVersion.file,
-          isDownload: true,
-        });
+        const downloadResponse = await fetch(
+          `/api/teams/${teamId}/documents/${prismaDocument.id}/download`,
+          { method: "POST" },
+        );
+        if (!downloadResponse.ok) {
+          throw new Error("Unable to prepare the document download");
+        }
+        const { downloadUrl } = (await downloadResponse.json()) as {
+          downloadUrl: string;
+        };
 
-        // Fetch the file from the S3 URL and create blob
+        // Fetch the authorized URL and create a local download blob.
         const response = await fetch(downloadUrl);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);

@@ -4,6 +4,7 @@ import AppMiddleware from "@/lib/middleware/app";
 import DomainMiddleware from "@/lib/middleware/domain";
 
 import { BLOCKED_PATHNAMES } from "./lib/constants";
+import { isApplicationHost } from "./lib/middleware/host-selection";
 import IncomingWebhookMiddleware, {
   isWebhookPath,
 } from "./lib/middleware/incoming-webhooks";
@@ -81,8 +82,10 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
     return IncomingWebhookMiddleware(req);
   }
 
-  // For custom domains, we need to handle them differently
-  if (isCustomDomain(host || "")) {
+  // The configured application host may be a custom domain itself. It must use
+  // AppMiddleware (and its admin protection), not the customer-domain renderer.
+  const appHost = process.env.NEXT_PUBLIC_APP_BASE_HOST;
+  if (!isApplicationHost(host, appHost) && isCustomDomain(host || "")) {
     return DomainMiddleware(req);
   }
 

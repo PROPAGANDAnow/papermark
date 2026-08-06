@@ -1,15 +1,22 @@
 /**
- * Document content is stored in S3 as a private object key. Reads still support
- * `VERCEL_BLOB` for documents stored before the migration, and public assets
- * (brand logos, banners, link preview images) still use Vercel Blob directly.
+ * Vercel Blob is the default document transport. Documents are uploaded as
+ * private Blob objects; S3 remains an explicit opt-in for deployments that need it.
  */
 export const isS3Transport = () =>
-  process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT === "s3";
+  process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT?.toLowerCase() === "s3";
+
+export const isVercelBlobTransport = () => !isS3Transport();
+
+export const assertDocumentUploadTransport = () => {
+  if (!isS3Transport() && !isVercelBlobTransport()) {
+    throw new Error("Unsupported document upload transport.");
+  }
+};
 
 export const assertS3Transport = () => {
   if (!isS3Transport()) {
     throw new Error(
-      'Unsupported upload transport: document uploads require NEXT_PUBLIC_UPLOAD_TRANSPORT="s3".',
+      'This operation requires NEXT_PUBLIC_UPLOAD_TRANSPORT="s3".',
     );
   }
 };

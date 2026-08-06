@@ -1,4 +1,5 @@
 import { DocumentStorageType } from "@prisma/client";
+import { upload } from "@vercel/blob/client";
 
 import { newId } from "@/lib/id-helper";
 import { getPagesCount } from "@/lib/utils/get-page-number-count";
@@ -9,7 +10,7 @@ import type {
 } from "@/lib/zod/schemas/multipart";
 
 import { SUPPORTED_DOCUMENT_MIME_TYPES } from "../constants";
-import { assertS3Transport } from "./transport";
+import { assertDocumentUploadTransport, isS3Transport } from "./transport";
 
 /**
  * Uploads a file to S3.
@@ -39,9 +40,43 @@ export const putFile = async ({
   numPages: number | undefined;
   fileSize: number | undefined;
 }> => {
-  assertS3Transport();
+  assertDocumentUploadTransport();
+  return isS3Transport()
+    ? putFileInS3({ file, teamId, docId })
+    : putFileInVercelBlob({ file, teamId, docId });
+};
 
-  return putFileInS3({ file, teamId, docId });
+const putFileInVercelBlob = async ({
+  file,
+  teamId,
+  docId = newId("doc"),
+}: {
+  file: File;
+  teamId: string;
+  docId?: string;
+}) => {
+  if (!SUPPORTED_DOCUMENT_MIME_TYPES.includes(file.type)) {
+    throw new Error("Only supported document file types can be uploaded");
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const blob = await upload(`documents/${teamId}/${docId}/${safeName}`, file, {
+    access: "private",
+    contentType: file.type,
+    handleUploadUrl: "/api/file/document-upload",
+    clientPayload: JSON.stringify({ teamId, docId }),
+    multipart: file.size > MULTIPART_THRESHOLD,
+  });
+
+  return {
+    type: DocumentStorageType.VERCEL_BLOB,
+    data: blob.url,
+    numPages:
+      file.type === "application/pdf"
+        ? await getPagesCount(await file.arrayBuffer())
+        : 1,
+    fileSize: file.size,
+  };
 };
 
 // Multipart upload threshold: 10MB
