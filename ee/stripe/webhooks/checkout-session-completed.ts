@@ -13,7 +13,7 @@ import Stripe from "stripe";
 import { sendUpgradePersonalEmail } from "@/lib/emails/send-upgrade-personal-welcome";
 import { sendUpgradePlanEmail } from "@/lib/emails/send-upgrade-plan";
 import prisma from "@/lib/prisma";
-import { sendUpgradeOneMonthCheckinEmailTask } from "@/lib/trigger/send-scheduled-email";
+import { sendUpgradeOneMonthCheckinEmailTask } from "@/lib/trigger/send-upgrade-checkin-email";
 import { log } from "@/lib/utils";
 
 import { getPlanFromPriceId } from "../utils";
