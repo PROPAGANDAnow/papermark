@@ -11,6 +11,21 @@ type NotificationPayload = {
   senderUserId: string;
 };
 
+// Retained so existing callers can enqueue the task without turning a mention
+// into an unscoped email. Delivery remains disabled until recipient-scoped
+// authorization and rendering are implemented end to end.
+export const sendConversationMentionNotificationTask = task({
+  id: "send-conversation-mention-notification",
+  retry: { maxAttempts: 1 },
+  run: async (payload: NotificationPayload) => {
+    logger.warn("Conversation mention notifications are unavailable", {
+      conversationId: payload.conversationId,
+      dataroomId: payload.dataroomId,
+      teamId: payload.teamId,
+    });
+  },
+});
+
 export const sendConversationMessageNotificationTask = task({
   id: "send-conversation-message-notification",
   retry: { maxAttempts: 3 },
