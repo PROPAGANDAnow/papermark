@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
@@ -14,10 +14,14 @@ import { Label } from "@/components/ui/label";
 
 export default function Login() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const [next, setNext] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setNext(new URLSearchParams(window.location.search).get("next"));
+  }, []);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
@@ -38,7 +42,6 @@ export default function Login() {
             return;
           }
 
-          const next = searchParams?.get("next");
           router.push(
             next?.startsWith("/") && !next.startsWith("//")
               ? next
