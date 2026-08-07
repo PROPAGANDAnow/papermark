@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  addFileToVectorStoreTask,
-  processDocumentForAITask,
-  SUPPORTED_AI_CONTENT_TYPES,
-} from "@/ee/features/ai/lib/trigger";
-import { createTeamVectorStore } from "@/ee/features/ai/lib/vector-stores/create-team-vector-store";
-import { removeFileFromVectorStore } from "@/ee/features/ai/lib/vector-stores/remove-file-from-vector-store";
-import { authOptions } from "@/lib/auth/auth-options";
 import { getServerSession } from "next-auth";
 
+import { authOptions } from "@/lib/auth/auth-options";
 import { getFeatureFlags } from "@/lib/featureFlags";
 import prisma from "@/lib/prisma";
 import { CustomUser } from "@/lib/types";
+
+// AI is an optional, credentialed capability. Never initialize its provider during build.
+export const dynamic = "force-dynamic";
 
 /**
  * POST /api/ai/store/teams/[teamId]/documents/[documentId]
@@ -104,6 +100,26 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    // AI is opt-in. Avoid loading the provider unless it is configured at runtime.
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "AI provider is not configured" },
+        { status: 503 },
+      );
+    }
+
+    const [
+      {
+        SUPPORTED_AI_CONTENT_TYPES,
+        addFileToVectorStoreTask,
+        processDocumentForAITask,
+      },
+      { createTeamVectorStore },
+    ] = await Promise.all([
+      import("@/ee/features/ai/lib/trigger"),
+      import("@/ee/features/ai/lib/vector-stores/create-team-vector-store"),
+    ]);
 
     // Create or get team vector store
     let vectorStoreId = document.team.vectorStoreId;
@@ -277,7 +293,17 @@ export async function DELETE(
       );
     }
 
+    // AI is opt-in. Avoid loading the provider unless it is configured at runtime.
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "AI provider is not configured" },
+        { status: 503 },
+      );
+    }
+
     // Remove file from vector store
+    const { removeFileFromVectorStore } =
+      await import("@/ee/features/ai/lib/vector-stores/remove-file-from-vector-store");
     await removeFileFromVectorStore(
       vectorStoreId,
       primaryVersion.vectorStoreFileId,
