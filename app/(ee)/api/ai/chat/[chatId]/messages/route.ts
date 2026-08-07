@@ -1,8 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { generateChatTitle } from "@/ee/features/ai/lib/chat/generate-chat-title";
 import { getFilteredDataroomDocumentIds } from "@/ee/features/ai/lib/chat/get-filtered-dataroom-document-ids";
-import { sendMessage } from "@/ee/features/ai/lib/chat/send-message";
 import { validateChatAccess } from "@/ee/features/ai/lib/permissions/validate-chat-access";
 import { sendMessageSchema } from "@/ee/features/ai/schemas/chat";
 import { authOptions } from "@/lib/auth/auth-options";
@@ -93,6 +91,15 @@ export async function POST(
       );
     }
 
+    // AI is an optional, credentialed capability. Check only after access is
+    // authorized, then load its provider lazily so builds need no credentials.
+    if (!process.env.OPENAI_API_KEY && !process.env.OPENAI_ADMIN_KEY) {
+      return new Response(
+        JSON.stringify({ error: "AI provider is not configured" }),
+        { status: 503, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     if (!chat.vectorStoreId) {
       return new Response(
         JSON.stringify({
@@ -115,6 +122,11 @@ export async function POST(
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
+
+    const [{ generateChatTitle }, { sendMessage }] = await Promise.all([
+      import("@/ee/features/ai/lib/chat/generate-chat-title"),
+      import("@/ee/features/ai/lib/chat/send-message"),
+    ]);
 
     // Generate title from first message if not set
     if (!chat.title && chat.messages.length === 0) {
