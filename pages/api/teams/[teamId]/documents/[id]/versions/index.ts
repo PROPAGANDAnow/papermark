@@ -181,7 +181,7 @@ export default async function handle(
         !isDownloadOnlyByExtension &&
         !isMarkdown
       ) {
-        await tasks.trigger<typeof convertFilesToPdfTask>(
+        await tasks.trigger<convertFilesToPdfTask>(
           "convert-files-to-pdf",
           {
             documentVersionId: version.id,
