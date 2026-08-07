@@ -32,6 +32,15 @@ export const rateLimiters = {
     enableProtection: true,
     analytics: true,
   }),
+
+  // Domain verification invokes Vercel APIs; scope the limit to the user and team.
+  domainVerification: new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(10, "20 m"),
+    prefix: "rl:domain-verification",
+    enableProtection: true,
+    analytics: true,
+  }),
 };
 
 /**
@@ -40,6 +49,7 @@ export const rateLimiters = {
 export async function checkRateLimit(
   limiter: Ratelimit,
   identifier: string,
+  { failOpen = true }: { failOpen?: boolean } = {},
 ): Promise<{ success: boolean; remaining?: number; error?: string }> {
   try {
     const result = await limiter.limit(identifier);
@@ -49,7 +59,10 @@ export async function checkRateLimit(
     };
   } catch (error) {
     console.error("Rate limiting error:", error);
-    // Fail open - allow request if rate limiting fails
-    return { success: true, error: "Rate limiting unavailable" };
+    // Sensitive operations can opt in to fail-closed behavior.
+    return {
+      success: failOpen,
+      error: "Rate limiting unavailable",
+    };
   }
 }

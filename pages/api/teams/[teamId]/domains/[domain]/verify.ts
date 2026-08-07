@@ -75,6 +75,7 @@ export default async function handle(
   const rateLimitResult = await checkRateLimit(
     rateLimiters.domainVerification,
     `${userId}:${teamId}`,
+    { failOpen: false },
   );
 
   if (!rateLimitResult.success) {
