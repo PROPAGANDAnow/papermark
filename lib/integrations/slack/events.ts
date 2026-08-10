@@ -6,11 +6,7 @@ import { createSlackMessage } from "./templates";
 import { SlackEventData, SlackIntegrationServer } from "./types";
 
 export class SlackEventManager {
-  private client: SlackClient;
-
-  constructor() {
-    this.client = new SlackClient();
-  }
+  private client: SlackClient | null = null;
 
   /**
    * Check if the viewer's email domain is in the team's ignored domains list
@@ -111,6 +107,7 @@ export class SlackEventManager {
               ...message,
               channel: channel.id,
             };
+            this.client ??= new SlackClient();
             await this.client.sendMessage(
               integration.credentials.accessToken,
               slackMessage,
@@ -161,18 +158,26 @@ export class SlackEventManager {
   }
 }
 
-export const slackEventManager = new SlackEventManager();
+let slackEventManager: SlackEventManager | null = null;
+
+function getSlackEventManager() {
+  slackEventManager ??= new SlackEventManager();
+  return slackEventManager;
+}
 
 export async function notifyDocumentView(
   data: Omit<SlackEventData, "eventType">,
 ) {
-  await slackEventManager.processEvent({ ...data, eventType: "document_view" });
+  await getSlackEventManager().processEvent({
+    ...data,
+    eventType: "document_view",
+  });
 }
 
 export async function notifyDataroomAccess(
   data: Omit<SlackEventData, "eventType">,
 ) {
-  await slackEventManager.processEvent({
+  await getSlackEventManager().processEvent({
     ...data,
     eventType: "dataroom_access",
   });
@@ -181,7 +186,7 @@ export async function notifyDataroomAccess(
 export async function notifyDocumentDownload(
   data: Omit<SlackEventData, "eventType">,
 ) {
-  await slackEventManager.processEvent({
+  await getSlackEventManager().processEvent({
     ...data,
     eventType: "document_download",
   });

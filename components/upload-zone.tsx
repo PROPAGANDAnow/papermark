@@ -22,7 +22,12 @@ import {
   MULTIPART_SIZE_THRESHOLD,
   multipartUpload,
 } from "@/lib/files/multipart-upload";
+import { putFile } from "@/lib/files/put-file";
 import { resumableUpload } from "@/lib/files/tus-upload";
+import {
+  chooseUploadZoneStrategy,
+  resolveUploadZoneStorageType,
+} from "@/lib/files/upload-zone-transport";
 import {
   BulkFolderRequestItem,
   BulkFolderResultItem,
@@ -880,21 +885,34 @@ export default function UploadZone({
             }
           }
 
-          // Files above the multipart threshold bypass the TUS Vercel
-          // function and PUT directly to S3 using pre-signed part URLs. TUS
-          // is still preferred for smaller files: each chunk is bounded by
-          // the function's `maxDuration`, but TUS's resumable behavior is
-          // valuable on flaky networks for the medium-file long tail.
-          const useMultipart =
-            process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT === "s3" &&
-            file.size > MULTIPART_SIZE_THRESHOLD;
+          // Vercel Blob deployments upload directly through the Blob client.
+          // S3 deployments keep TUS for smaller files and multipart uploads
+          // for files above the threshold.
+          const uploadStrategy = chooseUploadZoneStrategy({
+            isS3: process.env.NEXT_PUBLIC_UPLOAD_TRANSPORT === "s3",
+            fileSize: file.size,
+            multipartThreshold: MULTIPART_SIZE_THRESHOLD,
+          });
 
           let storageKey: string;
           let storageFileName: string;
           let storageFileType: string;
           let storageNumPages: number;
+          let blobStorageType: DocumentStorageType | null | undefined;
 
-          if (useMultipart) {
+          if (uploadStrategy === "vercel-blob") {
+            const result = await putFile({
+              file,
+              teamId: teamInfo?.currentTeam?.id as string,
+            });
+            storageKey = result.data!;
+            storageFileName = file.name;
+            storageFileType = file.type;
+            storageNumPages = result.numPages ?? numPages;
+            blobStorageType = result.type;
+            fileBytesUploaded.set(file, file.size);
+            emitUpdate();
+          } else if (uploadStrategy === "s3-multipart") {
             const result = await multipartUpload({
               file,
               teamId: teamInfo?.currentTeam?.id as string,
@@ -997,7 +1015,10 @@ export default function UploadZone({
             key: storageKey,
             supportedFileType: supportedFileType,
             name: file.name,
-            storageType: DocumentStorageType.S3_PATH,
+            storageType: resolveUploadZoneStorageType(
+              uploadStrategy,
+              blobStorageType,
+            ) as DocumentStorageType,
             contentType: contentType,
             fileSize: file.size,
           };
