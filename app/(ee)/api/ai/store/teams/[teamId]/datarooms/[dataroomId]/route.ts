@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  SUPPORTED_AI_CONTENT_TYPES,
-  addFileToVectorStoreTask,
-  processDocumentForAITask,
-} from "@/ee/features/ai/lib/trigger";
-import { createDataroomVectorStore } from "@/ee/features/ai/lib/vector-stores/create-dataroom-vector-store";
 import { authOptions } from "@/lib/auth/auth-options";
 import { getServerSession } from "next-auth";
 
@@ -54,6 +48,27 @@ export async function POST(
         { status: 403 },
       );
     }
+
+    if (!process.env.OPENAI_API_KEY && !process.env.OPENAI_ADMIN_KEY) {
+      return NextResponse.json(
+        { error: "AI provider is not configured" },
+        { status: 503 },
+      );
+    }
+
+    const [
+      {
+        SUPPORTED_AI_CONTENT_TYPES,
+        addFileToVectorStoreTask,
+        processDocumentForAITask,
+      },
+      { createDataroomVectorStore },
+    ] = await Promise.all([
+      import("@/ee/features/ai/lib/trigger"),
+      import(
+        "@/ee/features/ai/lib/vector-stores/create-dataroom-vector-store"
+      ),
+    ]);
 
     // Get dataroom and documents
     const dataroom = await prisma.dataroom.findUnique({

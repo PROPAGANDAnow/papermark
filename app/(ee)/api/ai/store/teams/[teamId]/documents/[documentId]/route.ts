@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  addFileToVectorStoreTask,
-  processDocumentForAITask,
-  SUPPORTED_AI_CONTENT_TYPES,
-} from "@/ee/features/ai/lib/trigger";
-import { createTeamVectorStore } from "@/ee/features/ai/lib/vector-stores/create-team-vector-store";
-import { removeFileFromVectorStore } from "@/ee/features/ai/lib/vector-stores/remove-file-from-vector-store";
 import { authOptions } from "@/lib/auth/auth-options";
 import { getServerSession } from "next-auth";
 
@@ -55,6 +48,25 @@ export async function POST(
         { status: 403 },
       );
     }
+
+    if (!process.env.OPENAI_API_KEY && !process.env.OPENAI_ADMIN_KEY) {
+      return NextResponse.json(
+        { error: "AI provider is not configured" },
+        { status: 503 },
+      );
+    }
+
+    const [
+      {
+        addFileToVectorStoreTask,
+        processDocumentForAITask,
+        SUPPORTED_AI_CONTENT_TYPES,
+      },
+      { createTeamVectorStore },
+    ] = await Promise.all([
+      import("@/ee/features/ai/lib/trigger"),
+      import("@/ee/features/ai/lib/vector-stores/create-team-vector-store"),
+    ]);
 
     // Get document and version
     const document = await prisma.document.findUnique({
@@ -266,6 +278,17 @@ export async function DELETE(
         { status: 403 },
       );
     }
+
+    if (!process.env.OPENAI_API_KEY && !process.env.OPENAI_ADMIN_KEY) {
+      return NextResponse.json(
+        { error: "AI provider is not configured" },
+        { status: 503 },
+      );
+    }
+
+    const { removeFileFromVectorStore } = await import(
+      "@/ee/features/ai/lib/vector-stores/remove-file-from-vector-store"
+    );
 
     const primaryVersion = document.versions[0];
     const vectorStoreId = document.team.vectorStoreId;
