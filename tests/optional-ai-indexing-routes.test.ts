@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const routes = [
+  "app/(ee)/api/ai/store/teams/[teamId]/route.ts",
   "app/(ee)/api/ai/store/teams/[teamId]/datarooms/[dataroomId]/route.ts",
   "app/(ee)/api/ai/store/teams/[teamId]/documents/[documentId]/route.ts",
 ];

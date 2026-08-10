@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getVectorStoreInfo } from "@/ee/features/ai/lib/vector-stores/get-vector-store-info";
 import { authOptions } from "@/lib/auth/auth-options";
 import { getServerSession } from "next-auth";
 
@@ -48,6 +47,17 @@ export async function GET(
         { status: 403 },
       );
     }
+
+    if (!process.env.OPENAI_API_KEY && !process.env.OPENAI_ADMIN_KEY) {
+      return NextResponse.json(
+        { error: "AI provider is not configured" },
+        { status: 503 },
+      );
+    }
+
+    const { getVectorStoreInfo } = await import(
+      "@/ee/features/ai/lib/vector-stores/get-vector-store-info"
+    );
 
     // Get team with vector store ID
     const team = await prisma.team.findUnique({
