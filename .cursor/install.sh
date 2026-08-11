@@ -49,7 +49,7 @@ if [ ! -f .env ]; then
   log "Writing local-dev .env ..."
   DEV_ADMIN_EMAIL="${DEV_ADMIN_EMAIL:-admin@example.com}"
   DEV_ADMIN_PASSWORD="${DEV_ADMIN_PASSWORD:-Papermark123!}"
-  ADMIN_HASH="$(node -e "console.log(require('bcryptjs').hashSync(process.env.P, 10))" P="$DEV_ADMIN_PASSWORD")"
+  ADMIN_HASH="$(P="$DEV_ADMIN_PASSWORD" node -e "console.log(require('bcryptjs').hashSync(process.env.P, 10))")"
   ADMIN_HASH_ESCAPED="$(printf '%s' "$ADMIN_HASH" | sed 's/\$/\\$/g')"
   cat > .env <<EOF
 NEXTAUTH_SECRET=dev-local-superstrong-secret-please-change
